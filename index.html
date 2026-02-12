@@ -1,836 +1,416 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="th">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5">
-  <title>🎸 Chord Viewer · คลังคอร์ดเพลง</title>
-  <style>
-    /* ---------- CSS Variables : Light & Dark theme ---------- */
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      transition: background-color 0.2s ease, color 0.2s, border-color 0.2s;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chord Viewer - เล่นดนตรีง่ายๆ</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --container-bg: #ffffff;
+            --text-color: #333333;
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --accent-color: #e9ecef;
+            --chord-color: #007bff;
+            --border-color: #dee2e6;
+            --sticky-bg: rgba(255, 255, 255, 0.95);
+        }
 
-    body {
-      background: var(--bg-primary);
-      color: var(--text-primary);
-      line-height: 1.5;
-    }
+        [data-theme="dark"] {
+            --bg-color: #1a1a1a;
+            --container-bg: #2d2d2d;
+            --text-color: #e0e0e0;
+            --primary-color: #4dabf7;
+            --secondary-color: #adb5bd;
+            --accent-color: #3d3d3d;
+            --chord-color: #4dabf7;
+            --border-color: #444444;
+            --sticky-bg: rgba(45, 45, 45, 0.95);
+        }
 
-    /* Light mode (default) */
-    :root {
-      --bg-primary: #f9f7f5;    /* ครีมอ่อน */
-      --bg-secondary: #ffffff;
-      --bg-card: #ffffff;
-      --bg-side: #f2f0ed;
-      --text-primary: #1e1e2a;
-      --text-secondary: #4a4a5a;
-      --accent-light: #d4e6f1;   /* ฟ้าอ่อน */
-      --accent-soft: #aaccdd;
-      --border: #e2e0dd;
-      --shadow: rgba(0,0,0,0.04) 0 4px 12px;
-      --sticky-bg: rgba(255, 255, 255, 0.9);
-      --btn-hover: #eae6e0;
-      --code-bg: #f1f3f4;
-    }
+        * { box-sizing: border-box; transition: background 0.3s, color 0.3s; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; line-height: 1.6; }
+        
+        /* Layout */
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+        header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 2px solid var(--border-color); }
+        
+        /* Components */
+        .btn { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; background: var(--accent-color); color: var(--text-color); }
+        .btn-primary { background: var(--primary-color); color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        .search-box { width: 100%; padding: 12px; margin: 20px 0; border: 1px solid var(--border-color); border-radius: 8px; background: var(--container-bg); color: var(--text-color); }
 
-    body.dark {
-      --bg-primary: #1a1c1e;
-      --bg-secondary: #2c2f33;
-      --bg-card: #2c2f33;
-      --bg-side: #23272a;
-      --text-primary: #edf2f7;
-      --text-secondary: #cbd5e0;
-      --accent-light: #2c5282;
-      --accent-soft: #4a6a8a;
-      --border: #3f444a;
-      --shadow: rgba(0,0,0,0.3) 0 6px 18px;
-      --sticky-bg: rgba(44, 47, 51, 0.95);
-      --btn-hover: #40464b;
-      --code-bg: #3a3f45;
-    }
+        /* Song List */
+        .song-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; margin-top: 20px; }
+        .song-card { background: var(--container-bg); padding: 15px; border-radius: 10px; border: 1px solid var(--border-color); cursor: pointer; position: relative; }
+        .song-card:hover { transform: translateY(-3px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .fav-star { position: absolute; top: 10px; right: 10px; font-size: 1.2rem; }
 
-    /* ---------- layout ---------- */
-    #app {
-      max-width: 1280px;
-      margin: 0 auto;
-      padding: 0 20px 40px;
-    }
+        /* Viewer Mode */
+        #viewer-screen { display: none; }
+        .controls-sticky { position: sticky; top: 0; background: var(--sticky-bg); z-index: 100; padding: 10px 0; border-bottom: 1px solid var(--border-color); backdrop-filter: blur(5px); }
+        .control-group { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 10px; }
+        
+        .lyrics-area { white-space: pre-wrap; margin-top: 30px; font-family: 'Courier New', Courier, monospace; overflow-x: auto; }
+        .line-wrapper { margin-bottom: 1.5em; display: flex; flex-direction: column; }
+        .chord-line { color: var(--chord-color); font-weight: bold; min-height: 1.2em; display: flex; }
+        .chord-item { position: absolute; }
+        .lyric-line { min-height: 1.2em; }
 
-    header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 20px 0;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 24px;
-      flex-wrap: wrap;
-      gap: 16px;
-    }
+        /* Modals */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); overflow-y: auto; }
+        .modal-content { background: var(--container-bg); margin: 5% auto; padding: 25px; width: 90%; max-width: 600px; border-radius: 12px; }
+        input, textarea, select { width: 100%; padding: 10px; margin: 8px 0; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-color); }
 
-    .logo-area {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 1.5rem;
-      font-weight: 600;
-    }
-
-    .logo-area span {
-      background: var(--accent-soft);
-      padding: 6px 12px;
-      border-radius: 40px;
-      color: #1e1e2a;
-      background: #b3d9e6;
-    }
-    body.dark .logo-area span {
-      color: #0a0c0e;
-      background: #7aa3b8;
-    }
-
-    .btn, button {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      padding: 8px 16px;
-      border-radius: 40px;
-      font-size: 0.95rem;
-      font-weight: 500;
-      color: var(--text-primary);
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      box-shadow: var(--shadow);
-      transition: 0.15s;
-    }
-    .btn:hover, button:hover {
-      background: var(--btn-hover);
-    }
-
-    /*  view container 切换 */
-    .view {
-      display: none;
-    }
-    .view.active {
-      display: block;
-    }
-
-    /* ---------- LIBRARY : song cards ---------- */
-    .library-header {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 28px;
-    }
-    .search-filter {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 16px;
-      align-items: center;
-    }
-    #searchInput {
-      padding: 12px 18px;
-      border-radius: 40px;
-      border: 1px solid var(--border);
-      background: var(--bg-card);
-      color: var(--text-primary);
-      width: 280px;
-      font-size: 1rem;
-    }
-    .tabs {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 24px;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 10px;
-    }
-    .tab-btn {
-      background: transparent;
-      border: none;
-      box-shadow: none;
-      border-radius: 0;
-      padding: 8px 16px;
-      border-bottom: 3px solid transparent;
-    }
-    .tab-btn.active {
-      border-bottom-color: var(--accent-soft);
-      font-weight: 600;
-    }
-
-    .song-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 24px;
-    }
-    .song-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 20px;
-      box-shadow: var(--shadow);
-      transition: transform 0.1s;
-      display: flex;
-      flex-direction: column;
-    }
-    .song-card:hover {
-      transform: translateY(-4px);
-    }
-    .song-title {
-      font-size: 1.25rem;
-      font-weight: 700;
-      margin-bottom: 6px;
-    }
-    .song-artist {
-      color: var(--text-secondary);
-      margin-bottom: 12px;
-      font-size: 0.95rem;
-    }
-    .tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin: 12px 0;
-    }
-    .tag {
-      background: var(--accent-light);
-      padding: 4px 12px;
-      border-radius: 30px;
-      font-size: 0.75rem;
-      font-weight: 500;
-      color: #1e2b3a;
-    }
-    body.dark .tag {
-      color: #edf2f7;
-      background: #2d4a62;
-    }
-    .card-footer {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: auto;
-    }
-    .fav-btn {
-      background: none;
-      border: none;
-      font-size: 1.6rem;
-      line-height: 1;
-      box-shadow: none;
-      padding: 0 4px;
-      color: #f5b042;
-    }
-    .fav-btn:hover {
-      background: none;
-      transform: scale(1.1);
-    }
-
-    /* ---------- CHORD VIEWER (sticky chords) ---------- */
-    .viewer-header {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 16px;
-      margin-bottom: 20px;
-    }
-    .sticky-panel {
-      position: sticky;
-      top: 0;
-      z-index: 20;
-      background: var(--sticky-bg);
-      backdrop-filter: blur(8px);
-      padding: 16px 0;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 24px;
-    }
-    .control-row {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 18px;
-    }
-    .chord-reference {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-top: 12px;
-      font-size: 1.1rem;
-      font-weight: 600;
-    }
-    .chord-badge {
-      background: var(--code-bg);
-      padding: 6px 14px;
-      border-radius: 40px;
-      border-left: 5px solid var(--accent-soft);
-    }
-    .lyrics-box {
-      font-size: var(--font-size, 18px);
-      line-height: 2.2;
-      padding-bottom: 40px;
-      white-space: pre-wrap;
-      font-family: 'Courier New', monospace;
-    }
-    .chord-line {
-      color: #0e6b8c;
-      font-weight: 700;
-      white-space: pre;
-      font-size: 0.9em;
-      margin-top: 12px;
-    }
-    body.dark .chord-line {
-      color: #b3e4f5;
-    }
-    .lyric-line {
-      white-space: pre;
-      margin-bottom: 8px;
-      font-size: 1em;
-    }
-    .hide-chords .chord-line {
-      display: none;
-    }
-    .auto-scroll-active {
-      scroll-behavior: smooth;
-    }
-
-    /* ---------- form & modals ---------- */
-    .form-group {
-      margin-bottom: 24px;
-    }
-    label {
-      display: block;
-      margin-bottom: 6px;
-      font-weight: 600;
-    }
-    input, select, textarea {
-      width: 100%;
-      padding: 12px 16px;
-      border-radius: 16px;
-      border: 1px solid var(--border);
-      background: var(--bg-card);
-      color: var(--text-primary);
-      font-size: 1rem;
-    }
-    textarea {
-      min-height: 200px;
-      font-family: monospace;
-    }
-
-    /* ---------- responsive ---------- */
-    @media (max-width: 720px) {
-      .song-grid { grid-template-columns: 1fr; }
-      .control-row { flex-direction: column; align-items: flex-start; }
-    }
-  </style>
+        .hidden { display: none !important; }
+        
+        @media (max-width: 600px) {
+            .control-group { justify-content: center; }
+        }
+    </style>
 </head>
-<body>
-  <div id="app">
-    <!-- ========== HEADER (Global) ========== -->
-    <header>
-      <div class="logo-area">
-        <span>🎵 ChordViewer</span>
-        <span style="background: var(--accent-soft); font-size: 0.8rem;">offline</span>
-      </div>
-      <div style="display: flex; gap: 12px;">
-        <button id="themeToggle" class="btn">🌙 Dark</button>
-        <button id="exportBtn" class="btn">📤 Export</button>
-        <button id="importBtn" class="btn">📥 Import</button>
-      </div>
-    </header>
+<body data-theme="light">
 
-    <!-- ========== MAIN VIEWS (SPA) ========== -->
-    <main id="main-content">
-      <!-- LIBRARY VIEW -->
-      <div id="libraryView" class="view active">
-        <div class="library-header">
-          <h1>📚 คลังเพลงของฉัน</h1>
-          <div>
-            <button id="addSongBtn" class="btn" style="background: var(--accent-soft);">➕ เพิ่มเพลง</button>
-          </div>
-        </div>
-        <!-- search & filter row -->
-        <div class="search-filter">
-          <input type="text" id="searchInput" placeholder="🔍 ค้นหาเพลง / ศิลปิน / แท็ก" autocomplete="off">
-          <select id="artistFilterSelect" style="width: 180px;">
-            <option value="">🎤 ศิลปินทั้งหมด</option>
-          </select>
-          <select id="tagFilterSelect" style="width: 160px;">
-            <option value="">🏷️ แท็กทั้งหมด</option>
-          </select>
-          <button id="favoritesOnlyBtn" class="btn">⭐ เฉพาะโปรด</button>
-        </div>
-
-        <!-- Tabs: All / Artists / Favorites -->
-        <div class="tabs">
-          <button id="tabAll" class="tab-btn active">🎵 เพลงทั้งหมด</button>
-          <button id="tabArtistGroup" class="tab-btn">👤 จัดกลุ่มศิลปิน</button>
-          <button id="tabFav" class="tab-btn">⭐ เพลงโปรด</button>
-        </div>
-
-        <!-- Song container -->
-        <div id="songContainer"></div>
-      </div>
-
-      <!-- CHORD VIEWER PAGE -->
-      <div id="chordViewerView" class="view">
-        <div class="viewer-header">
-          <button id="backToLibraryBtn" class="btn">◀ กลับคลัง</button>
-          <h2 id="viewerSongTitle"></h2>
-          <div style="display: flex; gap: 8px; margin-left: auto;">
-            <button id="editFromViewerBtn" class="btn">✏️ แก้ไข</button>
-            <button id="deleteFromViewerBtn" class="btn">🗑️ ลบ</button>
-            <button id="favViewerBtn" class="fav-btn" style="font-size: 2rem;">☆</button>
-          </div>
-        </div>
-
-        <!-- STICKY control panel + chords -->
-        <div class="sticky-panel">
-          <div class="control-row">
-            <div style="display: flex; gap: 8px; align-items: center;">
-              <span>คีย์: <strong id="currentKeyDisplay">C</strong></span>
-              <button id="transposeDownBtn" class="btn">♭ -</button>
-              <button id="transposeUpBtn" class="btn">♯ +</button>
-              <button id="resetKeyBtn" class="btn">↺ คีย์เดิม</button>
+<div class="container">
+    <div id="home-screen">
+        <header>
+            <h1>🎸 Chord Viewer</h1>
+            <div>
+                <button class="btn" onclick="toggleTheme()" id="theme-btn">🌙</button>
+                <button class="btn btn-primary" onclick="showModal('song-modal')">+ เพิ่มเพลง</button>
             </div>
-            <div style="display: flex; gap: 8px;">
-              <button id="fontDecBtn" class="btn">A-</button>
-              <button id="fontIncBtn" class="btn">A+</button>
-              <button id="toggleChordsBtn" class="btn">🎸 ซ่อนคอร์ด</button>
-            </div>
-            <div style="display: flex; gap: 8px;">
-              <button id="autoScrollPlayBtn" class="btn">▶ เลื่อน</button>
-              <button id="autoScrollStopBtn" class="btn">⏹ หยุด</button>
-              <span>⚡</span>
-              <input type="range" id="scrollSpeedSlider" min="1" max="5" step="0.5" value="2" style="width:100px;">
-              <span id="speedLabel">ปานกลาง</span>
-            </div>
-          </div>
-          <!-- คอร์ดทั้งหมดที่ใช้ (sticky) -->
-          <div id="chordReferenceSticky" class="chord-reference"></div>
+        </header>
+
+        <input type="text" class="search-box" id="search-input" placeholder="ค้นหาชื่อเพลง ศิลปิน หรือแท็ก..." oninput="renderLibrary()">
+
+        <div class="control-group">
+            <button class="btn" onclick="filterType = 'all'; renderLibrary()">ทั้งหมด</button>
+            <button class="btn" onclick="filterType = 'fav'; renderLibrary()">⭐ เพลงโปรด</button>
+            <button class="btn" onclick="exportData()">Export JSON</button>
+            <button class="btn" onclick="document.getElementById('import-file').click()">Import</button>
+            <input type="file" id="import-file" class="hidden" accept=".json" onchange="importData(event)">
         </div>
 
-        <!-- Lyrics display area -->
-        <div id="lyricsDisplay" class="lyrics-box" style="font-size: 18px;"></div>
-      </div>
+        <div class="song-grid" id="song-library"></div>
+    </div>
 
-      <!-- ADD / EDIT FORM VIEW -->
-      <div id="formView" class="view">
-        <div style="display: flex; gap: 16px; align-items: center; margin-bottom: 32px;">
-          <button id="cancelFormBtn" class="btn">◀ ยกเลิก</button>
-          <h2 id="formTitle">➕ เพิ่มเพลงใหม่</h2>
+    <div id="viewer-screen">
+        <div class="controls-sticky">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <button class="btn" onclick="closeViewer()">⬅ กลับ</button>
+                <h2 id="view-title" style="margin:0"></h2>
+                <button class="btn" id="view-fav-btn">☆</button>
+            </div>
+            
+            <hr style="border:0; border-top:1px solid var(--border-color); margin:10px 0;">
+            
+            <div class="control-group">
+                <span>Transpose:</span>
+                <button class="btn" onclick="transpose(-1)">-</button>
+                <b id="current-key-display">C</b>
+                <button class="btn" onclick="transpose(1)">+</button>
+                
+                <span style="margin-left:15px">Size:</span>
+                <button class="btn" onclick="changeFontSize(-2)">A-</button>
+                <button class="btn" onclick="changeFontSize(2)">A+</button>
+                
+                <button class="btn" onclick="toggleChords()" id="toggle-chord-btn">ซ่อนคอร์ด</button>
+            </div>
+
+            <div class="control-group">
+                <span>Scroll:</span>
+                <button class="btn" id="scroll-btn" onclick="toggleScroll()">▶ Play</button>
+                <input type="range" id="scroll-speed" min="1" max="10" value="2" style="width:100px">
+            </div>
+            <div id="chord-summary" style="font-size: 0.9rem; color: var(--secondary-color);"></div>
         </div>
-        <form id="songForm">
-          <input type="hidden" id="songId" value="">
-          <div class="form-group">
-            <label>🎤 ชื่อเพลง *</label>
-            <input type="text" id="titleInput" placeholder="เช่น ขอใจเธอแลกเบอร์โทร" required>
-          </div>
-          <div class="form-group">
-            <label>👤 ศิลปิน *</label>
-            <input type="text" id="artistInput" placeholder="นนท์ ธนนท์" required>
-          </div>
-          <div class="form-group">
-            <label>🎼 คีย์เริ่มต้น *</label>
-            <select id="keySelect" required>
-              <option value="C">C</option><option value="C#">C#</option><option value="D">D</option><option value="D#">D#</option>
-              <option value="E">E</option><option value="F">F</option><option value="F#">F#</option><option value="G">G</option>
-              <option value="G#">G#</option><option value="A">A</option><option value="A#">A#</option><option value="B">B</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>🏷️ แท็ก (คั่นด้วยคอมม่า) </label>
-            <input type="text" id="tagsInput" placeholder="Pop, Ballad, สตริง">
-          </div>
-          <div class="form-group">
-            <label>📄 เนื้อเพลง + คอร์ด (ใช้ [คอร์ด] วางหน้าคำ)</label>
-            <textarea id="lyricsInput" placeholder="[C]ขอ[C]ใจเธอแลก[C]เบอร์โทร..." required></textarea>
-            <small style="color: var(--text-secondary);">ตัวอย่าง: [C]ขอ[C]ใจเธอแลก[C]เบอร์โทร</small>
-          </div>
-          <button type="submit" id="saveSongBtn" class="btn" style="background: var(--accent-soft);">💾 บันทึกเพลง</button>
-        </form>
-      </div>
-    </main>
 
-    <!-- hidden import file input -->
-    <input type="file" id="importFileInput" accept=".json,application/json" style="display: none;">
-  </div>
+        <div id="lyrics-display" class="lyrics-area"></div>
+    </div>
+</div>
 
-  <script>
-    (function(){
-      "use strict";
+<div id="song-modal" class="modal">
+    <div class="modal-content">
+        <h3 id="modal-title">เพิ่มเพลงใหม่</h3>
+        <input type="text" id="form-title" placeholder="ชื่อเพลง (เช่น ขอใจเธอแลกเบอร์โทร)">
+        <input type="text" id="form-artist" placeholder="ศิลปิน">
+        <input type="text" id="form-key" placeholder="คีย์เริ่มต้น (เช่น C, G, Am)">
+        <input type="text" id="form-tags" placeholder="แท็ก (คั่นด้วยคอมม่า เช่น Pop, Rock)">
+        <textarea id="form-lyrics" rows="10" placeholder="ใส่เนื้อเพลงพร้อมคอร์ด เช่น: [C]ขอใจเธอ[G]แลกเบอร์โทร"></textarea>
+        <div style="display:flex; gap:10px; margin-top:10px;">
+            <button class="btn btn-primary" onclick="saveSong()" style="flex:1">บันทึก</button>
+            <button class="btn" onclick="hideModal('song-modal')" style="flex:1">ยกเลิก</button>
+        </div>
+        <button class="btn btn-danger" id="delete-btn" style="width:100%; margin-top:10px; display:none;">ลบเพลงนี้</button>
+    </div>
+</div>
 
-      // ---------- ******** DATA STORE ******** ----------
-      const STORAGE_KEY = 'chordViewerSongs';
-      const FAV_KEY = 'chordViewerFavs';
-      const SAMPLE_SONGS = [
-        { id: '1', title: 'ขอใจเธอแลกเบอร์โทร', artist: 'นนท์ ธนนท์', tags: ['Pop', 'Acoustic'], key: 'C', lyrics: '[C]ขอ[C]ใจเธอแลก[C]เบอร์โทร\n[C]ได้[C]ไหมเธอคน[C]ดี\n[G]อยากจะคุยกับเธอ[Am]ไปนานๆ ทุก[F]วัน' },
-        { id: '2', title: 'รักแรกพบ', artist: 'Klein', tags: ['Pop'], key: 'G', lyrics: '[G]รักแรกพบ[D]มันไม่เคย[Em]มีอยู่จริง[Bm] \n[C]แต่พอเจอเธอ[G]ฉันก็เข้าใจ[Am] [D]' },
-        { id: '3', title: 'คนไม่สำคัญ', artist: 'Three Man Down', tags: ['Rock', 'Sad'], key: 'A', lyrics: '[A]หากฉันเป็นได้แค่[E]คนไม่สำคัญ\n[F#m]ก็จะเก็บ[D]ความรักนี้[A]ไว้' },
-        { id: '4', title: 'ถ้าเธอต้องเลือก', artist: 'D Gerrard', tags: ['Ballad'], key: 'E', lyrics: '[E]ถ้าเธอต้องเลือก[B] ระหว่างฉันกับ[C#m]ใคร\n[A]เธอจะเลือกฉันไหม[E]' },
-        { id: '5', title: 'Melbourne', artist: 'Morvasu', tags: ['Indie'], key: 'F', lyrics: '[F]Melbourne [C]city [Dm]slow... [Bb]' },
-        { id: '6', title: 'Lovely', artist: 'Billie Eilish', tags: ['Pop'], key: 'C#', lyrics: '[C#]Thought I found a [G#]way' }
-      ];
-
-      // ---------- GLOBAL STATE ----------
-      let songs = [];
-      let favorites = new Set();      // เก็บ id string
-      let currentView = 'library';   // library, viewer, form
-      let currentSongId = null;
-      let transposeOffset = 0;
-      let originalKey = 'C';
-      let isAutoScrolling = false;
-      let autoScrollInterval = null;
-      let scrollSpeed = 2;          // 1-5
-      let fontSize = 18;           // px
-      let hideChordsFlag = false;
-      let darkMode = false;
-      let currentFilter = { search: '', artist: '', tag: '', onlyFav: false };
-      let activeTab = 'all';       // all, artist, fav
-
-      // ---------- UTILS / CHORD TRANSPOSE ----------
-      const chordRoots = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-      function transposeChord(chord, semitones) {
-        if (!chord) return chord;
-        const match = chord.match(/^([A-G]#?)(.*)$/);
-        if (!match) return chord;
-        let root = match[1];
-        let suffix = match[2];
-        let idx = chordRoots.indexOf(root);
-        if (idx === -1) return chord;
-        let newIdx = (idx + semitones + 12) % 12;
-        return chordRoots[newIdx] + suffix;
-      }
-
-      function transposeAllChords(lyrics, offset) {
-        if (offset === 0) return lyrics;
-        return lyrics.replace(/\[([^\]]+)\]/g, (match, chord) => {
-          return '[' + transposeChord(chord, offset) + ']';
-        });
-      }
-
-      // ---------- LOCALSTORAGE ----------
-      function loadSongs() {
-        let stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-          try { songs = JSON.parse(stored); } catch(e){ songs = []; }
+<script>
+    // --- Data Management ---
+    const defaultSongs = [
+        {
+            id: 1, title: "เพลงตัวอย่าง (ซอมบี้)", artist: "Slot Machine", 
+            key: "G", tags: ["Rock"], fav: false,
+            lyrics: "[G]เหมือนว่าเรา[D]ยังคงวนอยู่[Em]ที่เดิม\n[C]ไม่มีใครจะ[G]เดินจากไปได้[D]ไกล"
+        },
+        {
+            id: 2, title: "คุกกี้เสี่ยงทาย", artist: "BNK48", 
+            key: "E", tags: ["Pop"], fav: true,
+            lyrics: "[E]แอบมองเธออยู่นะจ๊ะ [G#m]แต่เธอไม่รู้บ้างเลย\n[A]แอบส่งใจให้นิดๆ [B]แต่ดูเธอช่างเฉยเมย"
         }
-        if (!songs || songs.length === 0) {
-          songs = SAMPLE_SONGS.map(s => ({ ...s })); // clone
-        }
-        // load favorites
-        let favStored = localStorage.getItem(FAV_KEY);
-        if (favStored) {
-          try { favorites = new Set(JSON.parse(favStored)); } catch(e){ favorites = new Set(); }
-        }
-      }
-      function saveSongs() {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(songs));
-      }
-      function saveFavorites() {
-        localStorage.setItem(FAV_KEY, JSON.stringify(Array.from(favorites)));
-      }
+    ];
 
-      // ---------- RENDER LIBRARY ----------
-      function renderLibrary() {
-        let container = document.getElementById('songContainer');
-        if (!container) return;
-        let filtered = songs.filter(song => {
-          if (currentFilter.onlyFav && !favorites.has(song.id)) return false;
-          if (currentFilter.artist && song.artist !== currentFilter.artist) return false;
-          if (currentFilter.tag) {
-            if (!song.tags || !song.tags.includes(currentFilter.tag)) return false;
-          }
-          if (currentFilter.search) {
-            let term = currentFilter.search.toLowerCase();
-            return song.title.toLowerCase().includes(term) || song.artist.toLowerCase().includes(term) || (song.tags && song.tags.some(t => t.toLowerCase().includes(term)));
-          }
-          return true;
+    let songs = JSON.parse(localStorage.getItem('chord_db')) || defaultSongs;
+    let currentSong = null;
+    let currentKeyOffset = 0;
+    let fontSize = 16;
+    let filterType = 'all';
+    let isScrolling = false;
+    let scrollInterval = null;
+    let showChords = true;
+
+    const keys = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+
+    // --- Core Logic ---
+    function saveToStorage() {
+        localStorage.setItem('chord_db', JSON.stringify(songs));
+    }
+
+    function renderLibrary() {
+        const query = document.getElementById('search-input').value.toLowerCase();
+        const grid = document.getElementById('song-library');
+        grid.innerHTML = '';
+
+        const filtered = songs.filter(s => {
+            const matchSearch = s.title.toLowerCase().includes(query) || s.artist.toLowerCase().includes(query);
+            const matchFilter = filterType === 'fav' ? s.fav : true;
+            return matchSearch && matchFilter;
         });
 
-        // active tab grouping
-        if (activeTab === 'fav') {
-          filtered = filtered.filter(s => favorites.has(s.id));
-        }
+        filtered.forEach(song => {
+            const card = document.createElement('div');
+            card.className = 'song-card';
+            card.innerHTML = `
+                <div class="fav-star">${song.fav ? '⭐' : '☆'}</div>
+                <div style="font-weight:bold">${song.title}</div>
+                <div style="font-size:0.8rem; color:var(--secondary-color)">${song.artist}</div>
+                <div style="margin-top:5px; font-size:0.7rem;">
+                    ${song.tags.map(t => `<span style="background:var(--accent-color); padding:2px 5px; border-radius:4px; margin-right:3px;">${t}</span>`).join('')}
+                </div>
+            `;
+            card.onclick = () => openViewer(song.id);
+            grid.appendChild(card);
+        });
+    }
 
+    // --- Viewer Logic ---
+    function openViewer(id) {
+        currentSong = songs.find(s => s.id === id);
+        currentKeyOffset = 0;
+        document.getElementById('home-screen').style.display = 'none';
+        document.getElementById('viewer-screen').style.display = 'block';
+        document.getElementById('view-title').innerText = currentSong.title;
+        document.getElementById('view-fav-btn').innerText = currentSong.fav ? '⭐' : '☆';
+        document.getElementById('view-fav-btn').onclick = (e) => {
+            currentSong.fav = !currentSong.fav;
+            e.target.innerText = currentSong.fav ? '⭐' : '☆';
+            saveToStorage();
+        };
+        updateDisplay();
+    }
+
+    function closeViewer() {
+        stopScroll();
+        document.getElementById('home-screen').style.display = 'block';
+        document.getElementById('viewer-screen').style.display = 'none';
+        renderLibrary();
+    }
+
+    function transpose(dir) {
+        currentKeyOffset += dir;
+        updateDisplay();
+    }
+
+    function transposeChord(chord, offset) {
+        return chord.replace(/[A-G](?![a-z])#?|b?/g, (match) => {
+            if (!match) return "";
+            let idx = keys.indexOf(match.replace('b', ''));
+            if (match.includes('b')) idx--; 
+            if (idx === -1) return match;
+            let newIdx = (idx + offset) % 12;
+            while (newIdx < 0) newIdx += 12;
+            return keys[newIdx];
+        });
+    }
+
+    function updateDisplay() {
+        const display = document.getElementById('lyrics-display');
+        const keyDisplay = document.getElementById('current-key-display');
+        const chordSummary = document.getElementById('chord-summary');
+        
+        keyDisplay.innerText = transposeChord(currentSong.key, currentKeyOffset);
+        display.style.fontSize = fontSize + 'px';
+
+        const lines = currentSong.lyrics.split('\n');
         let html = '';
-        if (activeTab === 'artistGroup') {
-          let artistMap = new Map();
-          filtered.forEach(s => { let a = s.artist; if(!artistMap.has(a)) artistMap.set(a, []); artistMap.get(a).push(s); });
-          for (let [artist, songList] of artistMap) {
-            html += `<h3 style="margin: 20px 0 8px;">🎤 ${artist}</h3><div class="song-grid">`;
-            songList.forEach(s => html += renderCard(s));
-            html += `</div>`;
-          }
-        } else {
-          html = `<div class="song-grid">${filtered.map(s => renderCard(s)).join('')}</div>`;
-        }
-        container.innerHTML = html || '<p style="padding: 40px; text-align: center;">✨ ไม่พบเพลง ลองเพิ่มเพลงใหม่</p>';
+        let usedChords = new Set();
 
-        // populate filter dropdowns
-        let artistSet = new Set(songs.map(s => s.artist));
-        let artistSelect = document.getElementById('artistFilterSelect');
-        artistSelect.innerHTML = '<option value="">🎤 ศิลปินทั้งหมด</option>' + Array.from(artistSet).sort().map(a => `<option value="${a}">${a}</option>`).join('');
-        artistSelect.value = currentFilter.artist || '';
-
-        let tagSet = new Set();
-        songs.forEach(s => s.tags && s.tags.forEach(t => tagSet.add(t)));
-        let tagSelect = document.getElementById('tagFilterSelect');
-        tagSelect.innerHTML = '<option value="">🏷️ แท็กทั้งหมด</option>' + Array.from(tagSet).sort().map(t => `<option value="${t}">${t}</option>`).join('');
-        tagSelect.value = currentFilter.tag || '';
-      }
-
-      function renderCard(song) {
-        let isFav = favorites.has(song.id);
-        return `<div class="song-card" data-id="${song.id}">
-          <div class="song-title">${song.title}</div>
-          <div class="song-artist">${song.artist} · คีย์ ${song.key}</div>
-          <div class="tags">${(song.tags || []).map(t => `<span class="tag">#${t}</span>`).join('')}</div>
-          <div class="card-footer">
-            <button class="btn select-song" data-id="${song.id}">🎸 ดูคอร์ด</button>
-            <button class="fav-btn" data-id="${song.id}">${isFav ? '★' : '☆'}</button>
-          </div>
-        </div>`;
-      }
-
-      // ---------- CHORD VIEWER ----------
-      function renderChordViewer() {
-        let song = songs.find(s => s.id === currentSongId);
-        if (!song) { switchView('library'); return; }
-        document.getElementById('viewerSongTitle').innerText = `${song.title} - ${song.artist}`;
-        originalKey = song.key;
-        document.getElementById('currentKeyDisplay').innerText = transposeKey(originalKey, transposeOffset);
-        // แสดงคอร์ดอ้างอิงจากเนื้อเพลงที่ transpose แล้ว
-        let transposedLyrics = transposeAllChords(song.lyrics, transposeOffset);
-        let allChords = new Set();
-        transposedLyrics.match(/\[([^\]]+)\]/g)?.forEach(c => { let m = c.match(/\[([^\]]+)\]/); if(m) allChords.add(m[1]); });
-        let chordRefDiv = document.getElementById('chordReferenceSticky');
-        chordRefDiv.innerHTML = Array.from(allChords).map(c => `<span class="chord-badge">${c}</span>`).join('');
-
-        // แสดงเนื้อเพลงแบบ 2 บรรทัด (คอร์ดบน, เนื้อล่าง)
-        let lines = transposedLyrics.split('\n');
-        let html = '';
         lines.forEach(line => {
-          let chordLine = '', lyricLine = line;
-          let parts = line.split(/(\[[^\]]+\])/);
-          let chordSpans = [];
-          let lyricSpans = [];
-          let currentIdx = 0;
-          parts.forEach(p => {
-            if (p.startsWith('[') && p.endsWith(']')) {
-              chordSpans.push(`<span style="margin-left: ${currentIdx}ch;">${p}</span>`);
-            } else {
-              lyricSpans.push(p);
-              currentIdx += p.length;
+            let chordLine = "";
+            let lyricLine = "";
+            let lastIdx = 0;
+            const regex = /\[(.*?)\]/g;
+            let match;
+
+            // แยกคอร์ดและเนื้อเพลงออกจากกัน
+            let tempLine = line;
+            let chordsInLine = [];
+            while ((match = regex.exec(line)) !== null) {
+                const chord = transposeChord(match[1], currentKeyOffset);
+                usedChords.add(chord);
+                chordsInLine.push({ chord: chord, pos: match.index - (chordsInLine.length * (match[1].length + 2)) });
+                tempLine = tempLine.replace(match[0], "");
             }
-          });
-          html += `<div class="chord-line">${chordSpans.join(' ')}</div>`;
-          html += `<div class="lyric-line">${lyricSpans.join('')}</div>`;
+
+            if (showChords) {
+                let cLine = " ".repeat(100).split(""); // สร้างบรรทัดคอร์ดว่าง
+                chordsInLine.forEach(c => {
+                    for(let i=0; i<c.chord.length; i++) cLine[c.pos + i] = c.chord[i];
+                });
+                chordLine = `<div class="chord-line">${cLine.join('').trimEnd()}</div>`;
+            }
+
+            html += `<div class="line-wrapper">${chordLine}<div class="lyric-line">${tempLine || " "}</div></div>`;
         });
-        let lyricsDiv = document.getElementById('lyricsDisplay');
-        lyricsDiv.innerHTML = html;
-        lyricsDiv.style.fontSize = fontSize + 'px';
-        lyricsDiv.classList.toggle('hide-chords', hideChordsFlag);
-        // ปุ่มโปรด
-        document.getElementById('favViewerBtn').innerText = favorites.has(song.id) ? '★' : '☆';
-      }
 
-      function transposeKey(key, offset) {
-        let idx = chordRoots.indexOf(key);
-        if (idx === -1) return key;
-        return chordRoots[(idx + offset + 12) % 12];
-      }
+        display.innerHTML = html;
+        chordSummary.innerText = "Chords: " + Array.from(usedChords).join(", ");
+    }
 
-      // ---------- VIEW SWITCHER ----------
-      function switchView(viewName, songId = null) {
-        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        if (viewName === 'library') {
-          document.getElementById('libraryView').classList.add('active');
-          currentView = 'library';
-          renderLibrary();
-        } else if (viewName === 'viewer') {
-          if (!songId) return;
-          currentSongId = songId;
-          transposeOffset = 0;
-          hideChordsFlag = false;
-          document.getElementById('toggleChordsBtn').innerText = '🎸 ซ่อนคอร์ด';
-          document.getElementById('chordViewerView').classList.add('active');
-          currentView = 'viewer';
-          renderChordViewer();
-        } else if (viewName === 'form') {
-          document.getElementById('formView').classList.add('active');
-          currentView = 'form';
+    // --- Features ---
+    function toggleTheme() {
+        const body = document.body;
+        const btn = document.getElementById('theme-btn');
+        if (body.getAttribute('data-theme') === 'light') {
+            body.setAttribute('data-theme', 'dark');
+            btn.innerText = '🌞';
+        } else {
+            body.setAttribute('data-theme', 'light');
+            btn.innerText = '🌙';
         }
-      }
+    }
 
-      // ---------- FORM : add / edit ----------
-      function openAddForm() {
-        document.getElementById('formTitle').innerText = '➕ เพิ่มเพลงใหม่';
-        document.getElementById('songForm').reset();
-        document.getElementById('songId').value = '';
-        switchView('form');
-      }
-      function openEditForm(songId) {
-        let song = songs.find(s => s.id === songId);
-        if (!song) return;
-        document.getElementById('formTitle').innerText = '✏️ แก้ไขเพลง';
-        document.getElementById('songId').value = song.id;
-        document.getElementById('titleInput').value = song.title;
-        document.getElementById('artistInput').value = song.artist;
-        document.getElementById('keySelect').value = song.key;
-        document.getElementById('tagsInput').value = (song.tags || []).join(', ');
-        document.getElementById('lyricsInput').value = song.lyrics;
-        switchView('form');
-      }
+    function toggleChords() {
+        showChords = !showChords;
+        document.getElementById('toggle-chord-btn').innerText = showChords ? "ซ่อนคอร์ด" : "แสดงคอร์ด";
+        updateDisplay();
+    }
 
-      // ---------- AUTO SCROLL ----------
-      function startAutoScroll() {
-        if (isAutoScrolling) stopAutoScroll();
-        let lyricsBox = document.getElementById('lyricsDisplay');
-        isAutoScrolling = true;
-        let speedFactor = {1: 10, 1.5: 15, 2: 22, 2.5: 30, 3: 38, 3.5: 46, 4: 55, 4.5: 65, 5: 75};
-        let intervalTime = 200; // ms
-        autoScrollInterval = setInterval(() => {
-          if (!lyricsBox) return;
-          lyricsBox.scrollBy({ top: speedFactor[scrollSpeed] || 22, behavior: 'smooth' });
-        }, 180);
-      }
-      function stopAutoScroll() {
-        clearInterval(autoScrollInterval);
-        isAutoScrolling = false;
-      }
+    function changeFontSize(delta) {
+        fontSize += delta;
+        updateDisplay();
+    }
 
-      // ---------- INITIAL EVENT LISTENERS ----------
-      function bindEvents() {
-        // theme
-        document.getElementById('themeToggle').addEventListener('click', function() {
-          document.body.classList.toggle('dark');
-          darkMode = !darkMode;
-          this.innerText = darkMode ? '☀️ Light' : '🌙 Dark';
-        });
+    function toggleScroll() {
+        if (isScrolling) stopScroll();
+        else startScroll();
+    }
 
-        // export/import
-        document.getElementById('exportBtn').addEventListener('click', exportData);
-        document.getElementById('importBtn').addEventListener('click', ()=>document.getElementById('importFileInput').click());
-        document.getElementById('importFileInput').addEventListener('change', importData);
+    function startScroll() {
+        isScrolling = true;
+        document.getElementById('scroll-btn').innerText = "⏸ Pause";
+        const speed = document.getElementById('scroll-speed').value;
+        scrollInterval = setInterval(() => {
+            window.scrollBy(0, 1);
+            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight) stopScroll();
+        }, 100 / speed);
+    }
 
-        // library events (delegation)
-        document.getElementById('songContainer').addEventListener('click', (e) => {
-          let card = e.target.closest('.song-card');
-          if (e.target.classList.contains('select-song') || e.target.closest('.select-song')) {
-            let id = e.target.dataset.id || e.target.closest('.select-song').dataset.id;
-            switchView('viewer', id);
-          }
-          if (e.target.classList.contains('fav-btn')) {
-            let id = e.target.dataset.id;
-            if (favorites.has(id)) favorites.delete(id); else favorites.add(id);
-            saveFavorites();
-            renderLibrary();
-          }
-        });
+    function stopScroll() {
+        isScrolling = false;
+        document.getElementById('scroll-btn').innerText = "▶ Play";
+        clearInterval(scrollInterval);
+    }
 
-        // search / filter
-        document.getElementById('searchInput').addEventListener('input', (e) => { currentFilter.search = e.target.value; renderLibrary(); });
-        document.getElementById('artistFilterSelect').addEventListener('change', (e) => { currentFilter.artist = e.target.value; renderLibrary(); });
-        document.getElementById('tagFilterSelect').addEventListener('change', (e) => { currentFilter.tag = e.target.value; renderLibrary(); });
-        document.getElementById('favoritesOnlyBtn').addEventListener('click', ()=>{ currentFilter.onlyFav = !currentFilter.onlyFav; renderLibrary(); });
-        document.getElementById('tabAll').addEventListener('click', ()=>{ activeTab='all'; renderLibrary(); });
-        document.getElementById('tabArtistGroup').addEventListener('click', ()=>{ activeTab='artistGroup'; renderLibrary(); });
-        document.getElementById('tabFav').addEventListener('click', ()=>{ activeTab='fav'; renderLibrary(); });
+    // --- Modal & Form ---
+    function showModal(id) {
+        document.getElementById(id).style.display = 'block';
+    }
 
-        // add song btn
-        document.getElementById('addSongBtn').addEventListener('click', openAddForm);
-        document.getElementById('cancelFormBtn').addEventListener('click', ()=> switchView('library'));
-        // form save
-        document.getElementById('songForm').addEventListener('submit', (e) => {
-          e.preventDefault();
-          let id = document.getElementById('songId').value;
-          let newSong = {
-            id: id || Date.now().toString(),
-            title: document.getElementById('titleInput').value,
-            artist: document.getElementById('artistInput').value,
-            key: document.getElementById('keySelect').value,
-            tags: document.getElementById('tagsInput').value.split(',').map(t=>t.trim()).filter(t=>t),
-            lyrics: document.getElementById('lyricsInput').value
-          };
-          if (id) {
-            let index = songs.findIndex(s => s.id === id);
-            if (index !== -1) songs[index] = newSong;
-          } else {
-            songs.push(newSong);
-          }
-          saveSongs();
-          switchView('library');
-        });
+    function hideModal(id) {
+        document.getElementById(id).style.display = 'none';
+        // Reset form
+        document.getElementById('form-title').value = '';
+        document.getElementById('form-artist').value = '';
+        document.getElementById('form-key').value = '';
+        document.getElementById('form-tags').value = '';
+        document.getElementById('form-lyrics').value = '';
+    }
 
-        // back to library
-        document.getElementById('backToLibraryBtn').addEventListener('click', ()=> switchView('library'));
-        // viewer controls
-        document.getElementById('transposeUpBtn').addEventListener('click', ()=>{ transposeOffset++; renderChordViewer(); });
-        document.getElementById('transposeDownBtn').addEventListener('click', ()=>{ transposeOffset--; renderChordViewer(); });
-        document.getElementById('resetKeyBtn').addEventListener('click', ()=>{ transposeOffset=0; renderChordViewer(); });
-        document.getElementById('fontIncBtn').addEventListener('click', ()=>{ fontSize = Math.min(32, fontSize+2); document.getElementById('lyricsDisplay').style.fontSize = fontSize+'px'; });
-        document.getElementById('fontDecBtn').addEventListener('click', ()=>{ fontSize = Math.max(12, fontSize-2); document.getElementById('lyricsDisplay').style.fontSize = fontSize+'px'; });
-        document.getElementById('toggleChordsBtn').addEventListener('click', function(){
-          hideChordsFlag = !hideChordsFlag;
-          document.getElementById('lyricsDisplay').classList.toggle('hide-chords', hideChordsFlag);
-          this.innerText = hideChordsFlag ? '🎸 แสดงคอร์ด' : '🎸 ซ่อนคอร์ด';
-        });
-        // auto scroll
-        document.getElementById('autoScrollPlayBtn').addEventListener('click', startAutoScroll);
-        document.getElementById('autoScrollStopBtn').addEventListener('click', stopAutoScroll);
-        document.getElementById('scrollSpeedSlider').addEventListener('input', (e)=>{ scrollSpeed = parseFloat(e.target.value); document.getElementById('speedLabel').innerText = ['ช้า','','ปานกลาง','','เร็ว'][Math.round(scrollSpeed)-1] || 'กลาง'; });
-        // fav in viewer
-        document.getElementById('favViewerBtn').addEventListener('click', function(){
-          if (favorites.has(currentSongId)) favorites.delete(currentSongId); else favorites.add(currentSongId);
-          saveFavorites();
-          this.innerText = favorites.has(currentSongId) ? '★' : '☆';
-        });
-        // edit from viewer
-        document.getElementById('editFromViewerBtn').addEventListener('click', ()=> { if(currentSongId) openEditForm(currentSongId); });
-        document.getElementById('deleteFromViewerBtn').addEventListener('click', ()=> {
-          if(confirm('ลบเพลงนี้ทิ้ง?')) { songs = songs.filter(s => s.id !== currentSongId); favorites.delete(currentSongId); saveSongs(); saveFavorites(); switchView('library'); }
-        });
-      }
+    function saveSong() {
+        const title = document.getElementById('form-title').value;
+        const artist = document.getElementById('form-artist').value;
+        if(!title || !artist) return alert("กรุณาใส่ชื่อเพลงและศิลปิน");
 
-      // ---------- EXPORT / IMPORT ----------
-      function exportData() {
-        let data = { songs, favorites: Array.from(favorites), version: '1.0' };
-        let blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
-        let url = URL.createObjectURL(blob);
-        let a = document.createElement('a');
+        const newSong = {
+            id: Date.now(),
+            title: title,
+            artist: artist,
+            key: document.getElementById('form-key').value || "C",
+            tags: document.getElementById('form-tags').value.split(',').map(t => t.trim()),
+            fav: false,
+            lyrics: document.getElementById('form-lyrics').value
+        };
+
+        songs.push(newSong);
+        saveToStorage();
+        hideModal('song-modal');
+        renderLibrary();
+    }
+
+    // --- Data Transfer ---
+    function exportData() {
+        const dataStr = JSON.stringify(songs, null, 2);
+        const blob = new Blob([dataStr], {type: "application/json"});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
         a.href = url;
-        a.download = `my-songs-backup-${new Date().toISOString().slice(0,10)}.json`;
+        a.download = `my-songs-backup-${new Date().toLocaleDateString()}.json`;
         a.click();
-      }
-      function importData(e) {
-        let file = e.target.files[0];
+    }
+
+    function importData(event) {
+        const file = event.target.files[0];
         if (!file) return;
-        let reader = new FileReader();
-        reader.onload = (ev) => {
-          try {
-            let data = JSON.parse(ev.target.result);
-            if (data.songs) {
-              if (confirm('Replace existing songs? (OK = แทนที่, Cancel = ผสาน)')) {
-                songs = data.songs;
-              } else {
-                songs = songs.concat(data.songs);
-              }
-              if (data.favorites) favorites = new Set(data.favorites);
-              saveSongs(); saveFavorites();
-              renderLibrary();
-            }
-          } catch (ex) { alert('ไฟล์ไม่ถูกต้อง'); }
-          document.getElementById('importFileInput').value = '';
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const imported = JSON.parse(e.target.result);
+                if (confirm("ต้องการนำเข้าเพลงใหม่และแทนที่ข้อมูลเดิมหรือไม่?")) {
+                    songs = imported;
+                    saveToStorage();
+                    renderLibrary();
+                }
+            } catch (err) { alert("ไฟล์ JSON ไม่ถูกต้อง"); }
         };
         reader.readAsText(file);
-      }
+    }
 
-      // ---------- BOOTSTRAP ----------
-      loadSongs();
-      bindEvents();
-      renderLibrary();
-    })();
-  </script>
+    // Hotkeys
+    window.onkeydown = (e) => {
+        if (document.getElementById('viewer-screen').style.display === 'block') {
+            if (e.code === 'Space') { e.preventDefault(); toggleScroll(); }
+            if (e.key === '+') transpose(1);
+            if (e.key === '-') transpose(-1);
+            if (e.key === 'Escape') closeViewer();
+        }
+    };
+
+    // Initial Load
+    renderLibrary();
+</script>
+
 </body>
 </html>
